@@ -136,7 +136,7 @@ public class Selfy
                 for (int i = 0; i < tags.size(); i++)
                 {
                     String s = tags.getString(i);
-                    if (!s.equals("selfie"))
+                    if (!s.equals(CRAWLER_TAG))
                     {
                         hashtagText += s + " ";
                     }
@@ -161,7 +161,7 @@ public class Selfy
             {
                 body += comment + " ";
             }
-            body = body.replaceAll("#selfie", "");
+            body = body.replaceAll(CRAWLER_TAG, "");
             body = body.replaceAll("#", "");
             body = body.replaceAll("\n", " ");
 
@@ -224,6 +224,7 @@ public class Selfy
         }
 
     }
+    public static final String CRAWLER_TAG = "selfie";
 
     /**
      * @param args the command line arguments

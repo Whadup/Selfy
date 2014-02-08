@@ -59,7 +59,15 @@
 \maketitle
 \section{Collaboration Detail}
 \section{Description}
+	For our project, we decided to crawl and index data found on Instagram\footnote{\url{instagram.com}}. Instagram is a popular\footnote{150 million users reported in September, 2013} social media application that allows users to publish photos and videos and search the media published by other users. Each user is identified by a unique user name. Each media item can have a caption, a list of comments by other users or a location. As known from other popular social networks like Twitter and Facebook, captions and comments can contain hashtags.
 \section{Crawling}
+	The crawler is itself a webserver. Once we register a subscription at instagram.com, their servers start connecting to our crawler. Everytime there is new media, they issue a http POST request to our server. The post does not contain the actual media, but is merely a notification that there has been an update. We then grab the actual data by requesting all recently added media from their servers using a http GET request.
+
 	\includegraphics[width=\textwidth,keepaspectratio]{crawler.pdf}
+
+	The response is a JSON file containing a number of media items.
+
+	using node.js\footnote{\url{http://nodejs.org/}}
+
 \section{Indexing}
 \end{document}

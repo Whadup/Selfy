@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}
+% /usr/local/texlive/2013/bin/x86_64-darwin/pdflatex 
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[fleqn]{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage[letterpaper]{geometry}
+\linespread{1.35}
+\usepackage[font=small,labelfont=bf]{caption}
+%\usepackage{cancel}
+
+% körper und mengen
+\newcommand{\setn}{\mathbb N}
+\newcommand{\setr}{\mathbb R}
+\newcommand{\setc}{\mathbb C}
+\newcommand{\setk}{\mathbb K}
+
+% reihe von #1 bis unendlich über #2
+\newcommand{\reihe}[2]{\sum\limits_{#1}^{\infty}{#2}}
+% summe von #1 bis #2 über #3
+\newcommand{\summe}[3]{\sum\limits_{#1}^{#2}{#3}}
+% integral von #1 bis #2 über #3 nach #4
+\newcommand{\integrald}[4]{\int\limits_{#1}^{#2}{#3 \; \mathrm d#4}}
+% integral von #1 bis #2 über #3 (d/dx muss dann selbst angegeben werden)
+\newcommand{\integral}[3]{\int\limits_{#1}^{#2}{#3}}
+% integralberechnung von #1 bis #2 über 3
+\newcommand{\integralv}[3]{\left[ #3 \right]_{#1}^{#2}}
+% betrag mit wachsenden betragsstrichen
+\newcommand{\betrag}[1]{\left| #1 \right|}
+% limes n gegen unendlich
+\newcommand{\limesn}[1]{\lim\limits_{n \to \infty}{#1}}
+% limes h gegen 0
+\newcommand{\limesh}[1]{\lim\limits_{h \to 0}{#1}}
+% vektor kurzschreibweise...
+\newcommand{\vect}[1]{\left(\begin{array}{c}#1\end{array}\right)}
+%normen
+\newcommand{\norm}[1]{\left \Vert {#1} \right \Vert}
+\newcommand{\normzwei}[1]{\norm {#1}_{2}}
+\newcommand{\norminfty}[1]{\norm {#1}_{\infty}}
+\newcommand{\qed}{\hfill \ensuremath{\Box}}
+% namentabelle till lukas stefan
+\newcommand{\lukas}{\begin{center}
+	\begin{tabular}{c|c}
+		Name & Student ID \\
+		\hline
+		Lukas Pfahler & 577332 \\
+	\end{tabular}
+\end{center}}
+% gruppe
+\newcommand{\gruppe}[1]{\begin{center} Gruppe {#1} \end{center}}
+
+\title{Information Retrieval and Web Search - Project Phase 1}
+\author{Lukas Pfahler \and Tejas Umakanth}
+\begin{document}
+\maketitle
+\section{Collaboration Detail}
+\section{Description}
+\section{Crawling}
+\section{Indexing}
+\end{document}

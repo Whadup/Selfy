@@ -33,6 +33,14 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import javax.json.*;
 import javax.json.stream.JsonParser;
+import org.apache.lucene.spatial.SpatialStrategy;
+import org.apache.lucene.spatial.prefix.PrefixTreeStrategy;
+import org.apache.lucene.spatial.prefix.tree.GeohashPrefixTree;
+import org.apache.lucene.spatial.prefix.tree.SpatialPrefixTree;
+import com.spatial4j.core.context.SpatialContext;
+import com.spatial4j.core.exception.InvalidShapeException;
+import com.spatial4j.core.shape.Point;
+import org.apache.lucene.spatial.prefix.RecursivePrefixTreeStrategy;
 import org.apache.lucene.store.SimpleFSDirectory;
 
 /**
@@ -45,13 +53,23 @@ public class Selfy
     private final StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
     private Directory index;
     private IndexWriter w;
-    
+    private SpatialStrategy spatialStrategy;
+    private SpatialContext spacialContext;
+
     public Selfy()
     {
         try
         {
-            index  = new SimpleFSDirectory(new File("index"));
+            index = new SimpleFSDirectory(new File("index"));
+
             IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer);
+
+            spacialContext = SpatialContext.GEO;
+
+            SpatialPrefixTree grid = new GeohashPrefixTree(spacialContext, 11);
+
+            spatialStrategy = new RecursivePrefixTreeStrategy(grid, "location");
+
             w = new IndexWriter(index, config);
 
             int i = 0;
@@ -64,22 +82,18 @@ public class Selfy
                     i++;
                 }
 
-              
             }
             w.commit();
             w.close();
             index.close();
-            
 
         } catch (IOException ex)
         {
-            w=null;
+            w = null;
             index = null;
             Logger.getLogger(Selfy.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
-        
+
     }
 
     public void addSelfie(File f)
@@ -95,8 +109,7 @@ public class Selfy
             String hashtagText = "";
             String idText = "";
             String userText = "";
-            
-            
+
             if (!json.isNull("caption"))
             {
                 JsonObject caption = json.getJsonObject("caption");
@@ -122,23 +135,27 @@ public class Selfy
                 JsonArray tags = json.getJsonArray("tags");
                 for (int i = 0; i < tags.size(); i++)
                 {
-                    String s=tags.getString(i);
-                    if(!s.equals("selfie"))
+                    String s = tags.getString(i);
+                    if (!s.equals("selfie"))
+                    {
                         hashtagText += s + " ";
+                    }
                 }
             }
-            if(!json.isNull("id"))
+            if (!json.isNull("id"))
+            {
                 idText = json.getString("id");
-            
-            if(!json.isNull("user"))
+            }
+
+            if (!json.isNull("user"))
             {
                 JsonObject user = json.getJsonObject("user");
-                if(!user.isNull("username"))
+                if (!user.isNull("username"))
+                {
                     userText = user.getString("username");
+                }
             }
-            
-            
-            
+
             String body = captionText + " ";
             for (String comment : commentsText)
             {
@@ -147,23 +164,52 @@ public class Selfy
             body = body.replaceAll("#selfie", "");
             body = body.replaceAll("#", "");
             body = body.replaceAll("\n", " ");
-            
-            if(!json.isNull("location"))
-            {
-                JsonObject location = json.getJsonObject("location");
-                if(!location.isNull("name"))
-                    body = body + " " + location.getString("location");
-                double lat = Double.parseDouble(json.getString("latitude"));
-                double lon = Double.parseDouble(json.getString("longitude"));
-            }
-            
-            System.out.println(idText);
-            
+
             Document doc = new Document();
-            doc.add(new TextField("body", body, Field.Store.YES));
+
             doc.add(new TextField("user", userText, Field.Store.YES));
             doc.add(new TextField("hashtags", hashtagText, Field.Store.YES));
-            doc.add(new StringField("id",idText,Field.Store.YES));
+            doc.add(new StringField("id", idText, Field.Store.YES));
+
+            if (!json.isNull("location"))
+            {
+                JsonObject location = json.getJsonObject("location");
+
+                if (location != null)
+                {
+                    if (location.containsKey("name"))
+                    {
+                        if (!location.isNull("name"))
+                        {
+                            body = body + " " + location.getString("name");
+                        }
+                    }
+                    if (location.containsKey("longitude") && location.containsKey("latitude"))
+                    {
+                        double lat = location.getJsonNumber("latitude").doubleValue();
+                        double lon = location.getJsonNumber("longitude").doubleValue();
+
+                        try
+                        {
+                            Point p = spacialContext.makePoint(lon, lat);
+                            for (Field field : spatialStrategy.createIndexableFields(p))
+                            {
+                                doc.add(field);
+                            }
+                        } catch (InvalidShapeException e)
+                        {
+                            System.out.println("corrupt location");
+                        }
+
+                    }
+                }
+
+            }
+
+            doc.add(new TextField("body", body, Field.Store.YES));
+
+            System.out.println(idText);
+
             try
             {
                 w.addDocument(doc);
@@ -171,7 +217,6 @@ public class Selfy
             {
                 Logger.getLogger(Selfy.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
 
         } catch (FileNotFoundException ex)
         {

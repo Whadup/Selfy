@@ -23,10 +23,3 @@ callback = function(error, response, body){
 
 request({url: api, json:1},callback);
 
-weatherApi = "http://api.wunderground.com/api/c80afcee5309db86/conditions/q/CA/Laguna_Beach.json"
-
-weatherCallback = function(error, response, body)
-{
-	console.dir(body.current_observation.temp_f);
-}
-request({url: weatherApi,json:1},weatherCallback);

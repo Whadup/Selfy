@@ -8,6 +8,7 @@
 \usepackage{hyperref}
 \usepackage{parskip}
 \usepackage{tikz} 
+\usepackage{wrapfig} 
 \usepackage[letterpaper]{geometry}
 \linespread{1.35}
 \usepackage[font=small,labelfont=bf]{caption}
@@ -57,17 +58,38 @@
 \author{Lukas Pfahler \and Tejas Umakanth}
 \begin{document}
 \maketitle
-\section{Collaboration Detail}
+\section{Collaboration Details}
+	We both do everything. clever...asdfa sdkfjalöksdj fölakdjf öaljdf,ajhdf a abdf afas
+	dasfdghalkjdhfa
+
+
+	adsfadsf
+
+	sfg
+	asd
+
+	sdfg
 \section{Description}
-	For our project, we decided to crawl and index data found on Instagram\footnote{\url{instagram.com}}. Instagram is a popular\footnote{150 million users reported in September, 2013} social media application that allows users to publish photos and videos and search the media published by other users. Each user is identified by a unique user name. Each media item can have a caption, a list of comments by other users or a location. As known from other popular social networks like Twitter and Facebook, captions and comments can contain hashtags.
+	\begin{wrapfigure}[5]{l}{3.05cm}
+  		\vspace{-0.6cm}
+  		\includegraphics[width=3cm,height=3cm]{logo.png}
+	\end{wrapfigure}
+	For our project, we decided to crawl and index data found on Instagram\footnote{\url{instagram.com}}. Instagram is a popular\footnote{Instagram reported 150 million users in September, 2013.} social media application that allows users to publish photos and videos and search the media published by other users. Each user is identified by a unique user name. Each media item can have a caption, a list of comments by other users or a location. As known from other popular social networks like Twitter and Facebook, captions and comments can contain hashtags.
 \section{Crawling}
-	The crawler is itself a webserver. Once we register a subscription at instagram.com, their servers start connecting to our crawler. Everytime there is new media, they issue a http POST request to our server. The post does not contain the actual media, but is merely a notification that there has been an update. We then grab the actual data by requesting all recently added media from their servers using a http GET request.
+	Instagram offers a developer API that allows us to subscribe to real time updates and crawl new media items as soon as they are posted.\footnote{\url{http://instagram.com/developer/realtime/}} All communication between the crawler and instagram is done using the HTTP protocol: The crawler is itself a http-server and once we subscripe to media updates at instagram.com, their servers start connecting to our crawler. Everytime there is new media, they issue a http POST request. The post does not contain the actual media, but is merely a notification that there has been an update. We then grab the actual data by requesting all recently added media from their servers in a http GET request.
 
-	\includegraphics[width=\textwidth,keepaspectratio]{crawler.pdf}
+	\vspace{0.5cm}\includegraphics[width=\textwidth,keepaspectratio]{crawler.pdf}
 
-	The response is a JSON file containing a number of media items.
+	The response is a JSON file containing a list of media items. We save each of those items in a separate JSON file. We also save a thumbnail image for each media item.
 
-	using node.js\footnote{\url{http://nodejs.org/}}
+	Our crawler is based on the software platform Node.js, which allows us to setup a http-server and request data in an asynchronous fashion with very little javascript code.
+	\begin{quote}
+		Node.js is a platform built on Chrome's JavaScript runtime. [..] It uses an event-driven, non-blocking I/O model that makes it lightweight and efficient, perfect for data-intensive real-time applications that run across distributed devices.\footnote{\url{http://nodejs.org/}}
+	\end{quote}
+
+	Instagram allowes developers to issue 5000 requests per hour\footnote{\url{http://instagram.com/developer/endpoints/}}, thus we introduced a politeness factor $p$: Only every $p$-th time our crawler is notified we actually request the new data. This has two effects: First, the number of requests is reduced and second, the number of new media items per response is higher. It also means that we probably miss a fraction of the data. However, if one would setup a larger system with multiple crawlers the coverage would increase.
+
+
 
 \section{Indexing}
 \end{document}

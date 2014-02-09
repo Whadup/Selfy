@@ -49,8 +49,9 @@ import org.apache.lucene.store.SimpleFSDirectory;
  */
 public class Selfy
 {
+
     public static final String CRAWLER_TAG = "selfie";
-    
+
     private final StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
     private Directory index;
     private IndexWriter w;
@@ -65,7 +66,6 @@ public class Selfy
             index = new SimpleFSDirectory(new File("index"));
             IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer);
 
-            
             //Index GPS Locations
             spacialContext = SpatialContext.GEO;
             SpatialPrefixTree grid = new GeohashPrefixTree(spacialContext, 11);
@@ -74,21 +74,29 @@ public class Selfy
             //index writer
             w = new IndexWriter(index, config);
 
-            
             //Iterate over all files
             int i = 0;
-            for (File selfie : new File("/Users/lukas/Desktop/selfies").listFiles())
+            for (File dir : new File("/Users/lukas/Desktop/selfies").listFiles())
             {
-                //index all json files
-                if (selfie.isFile() && selfie.getName().endsWith(".json"))
+                if (dir.isDirectory())
                 {
-                    addSelfie(selfie);
-                    i++;
+                    for (File selfie : dir.listFiles())
+                    {
+                        //index all json files
+                        if (selfie.isFile() && selfie.getName().endsWith(".json"))
+                        {
+                            addSelfie(selfie);
+                            i++;
+                        }
+                    }
                 }
-                if(i==10000)
+                //lazy :D
+                if (i >= 10000)
+                {
                     break;
+                }
             }
-            
+
             //save the index
             w.commit();
             w.close();
@@ -108,12 +116,11 @@ public class Selfy
         try
         {
             System.out.print(f.getName() + ": ");
-            
+
             //Open JSON
             JsonReader reader = Json.createReader(new FileReader(f));
             JsonObject json = reader.readObject();
 
-            
             //I want to extract these Strings from the json
             String captionText = "";
             ArrayList<String> commentsText = new ArrayList<>();
@@ -177,7 +184,7 @@ public class Selfy
             {
                 body += comment + " ";
             }
-            
+
             // remove the hashtag used to crawl tha data, as every 
             // document contains it, thus it is useless for creating a reverse index
             body = body.replaceAll(CRAWLER_TAG, "");
@@ -191,7 +198,6 @@ public class Selfy
             doc.add(new TextField("hashtags", hashtagText, Field.Store.YES));
             doc.add(new StringField("id", idText, Field.Store.YES));
 
-            
             //Index location
             if (!json.isNull("location"))
             {
@@ -249,7 +255,6 @@ public class Selfy
         }
 
     }
-    
 
     /**
      * @param args the command line arguments

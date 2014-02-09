@@ -1,6 +1,7 @@
 var http = require('http');
 var url = require('url');
 var fs = require("fs");
+var path = require("path");
 var querystring = require('querystring');
 var requestData = require("request");
 
@@ -14,14 +15,17 @@ callback = function(error, response, body){
 		return;
 	for(key in body.data)
 	{
-		fs.writeFile("selfies/"+body.data[key].id+".json", JSON.stringify(body.data[key], null, 4), function(err) {
+		prefix = body.data[key].id.substring(0,5);
+		if(!path.existsSync("selfies/"+prefix))
+			fs.mkdirSync("selfies/"+prefix);
+		fs.writeFile("selfies/"+prefix+"/"+body.data[key].id+".json", JSON.stringify(body.data[key], null, 4), function(err) {
 			if(err) 
 			{
 				console.log(err);
 			}
 		}); 
 		console.dir(body.data[key].images.low_resolution.url);
-		requestData(body.data[key].images.thumbnail.url).pipe(fs.createWriteStream("selfies/"+body.data[key].id+".jpg"));
+		requestData(body.data[key].images.thumbnail.url).pipe(fs.createWriteStream("selfies/"+prefix+"/"+body.data[key].id+".jpg"));
 	}
 };
 

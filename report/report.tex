@@ -90,16 +90,15 @@
 			Node.js is a platform built on Chrome's JavaScript runtime. [..] It uses an event-driven, non-blocking I/O model that makes it lightweight and efficient, perfect for data-intensive real-time applications that run across distributed devices.\footnote{\url{http://nodejs.org/}}
 		\end{quote}
 
-		Instagram allowes developers to issue 5000 requests per hour\footnote{\url{http://instagram.com/developer/endpoints/}}, thus we introduced a politeness factor $p$: Only every $p$-th time our crawler is notified we actually request the new data. This has two effects: First, the number of requests is reduced and second, the number of new media items per response is higher. It also means that we probably miss a fraction of the data. However, if one would setup a larger system with multiple crawlers the coverage would increase.
+		Instagram allowes developers to issue 5000 requests per hour\footnote{\url{http://instagram.com/developer/endpoints/}}, thus we introduced a politeness factor $p$: Only every $p$-th time our crawler is notified we actually request the new data. This has three effects: First, the number of requests is reduced and second, the number of new media items per response is higher. It also means that we probably miss a fraction of the data. However, if one would setup a larger system with multiple crawlers the coverage would increase. Third, for subscriptions with a very high update frequency, this makes sure we don't try to download more than our own bandwidth limit allows us to.
 
-		Limitation of our own bandwidth.
 	\subsection{Indexing}
 		A problem with the data crawled from Instagram is, that it contains only a relatively small amount of caption text - oftentimes the caption is merely a list of hashtags. To get more text, we index a concatenation of the caption and all comments. If the item is supplied with a named location, we also add the name to the indexed text. We call this concatenation $body$. From $body$ we remove all $\#$-characters. If the crawler subscribed to a specific hashtag, we also remove this tag, since it is present in all items and thus is useless for indexing.
 
 		Furthermore, we introduce a field just for indexing the list of hashtags provided to the media item. Note that this are both hashtags from the caption and from the comments. Also we index the username separately.
 
-		Finally, we use Lucene's spatial indexing module to index the media items by their GPS locations.
-		blablablablabla
+		Finally, we use Lucene's spatial indexing module to index the media items by their GPS locations. Internally, this builds a inverted index based on Geohash\footnote{See \url{http://en.wikipedia.org/wiki/Geohash} for more details}. The spatial module hashes longitude/latitude points to strings, such that close points share a longer prefix. It then builds a prefix tree on those strings and builds a inverted index of its nodes.
+
 \section{Usage}
 	\subsection{Crawler}
 		To run our crawler, you first have to install node.js, which you can download at 

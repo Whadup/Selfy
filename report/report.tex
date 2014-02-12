@@ -131,5 +131,10 @@
 		You should always unsubscribe before shutting down the crawler (\texttt{CTRL-C}), if you fail to do so you might not be able to subscribe to media for a while. We suspect that the servers at Instagram need some time to realize that our crawler is not running anymore and continue to try to send the new subscriptions to our already shutdown crawler.
 	\subsection{Indexer}
 \section{Performance}
-
+	The time needed to for indexing is dependant on the system on which the indexing is done. This performance analysis was carried out on a laptop with a 2.4 GHz CPU. For performing this test, we use a document containing 3GB worth of JSON files that are returned by our crawler. Then we try to index 10k,20k and so on up to 50k JSON files in the document and calculate the time taken to index in each case. As we can see in figure~\ref{fig:1}, the indexing time increases almost linearly as the number of files that are indexed increases.
+	\begin{figure}
+		\includegraphics[keepaspectratio, width=\textwidth]{Chart.png}
+		\caption{Indexing Performance}
+		\label{fig:1}
+	\end{figure}
 \end{document}

@@ -32,7 +32,7 @@ public class JSONOutput extends FileOutputFormat<Text, MapWritable>
         Path p = FileOutputFormat.getOutputPath(tac);
         FileSystem fileSystem = p.getFileSystem(tac.getConfiguration());
 
-        final int n = 256;
+        final int n = 1024;
         final FSDataOutputStream[] streams = new FSDataOutputStream[n];
         final boolean[] first = new boolean[n];
         

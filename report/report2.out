@@ -2,9 +2,8 @@
 \BOOKMARK [1][-]{section.2}{Architecture}{}% 2
 \BOOKMARK [2][-]{subsection.2.1}{Indexing}{section.2}% 3
 \BOOKMARK [2][-]{subsection.2.2}{Webinterface and Search Engine}{section.2}% 4
-\BOOKMARK [2][-]{subsection.2.3}{Searching}{section.2}% 5
-\BOOKMARK [1][-]{section.3}{Usage}{}% 6
-\BOOKMARK [2][-]{subsection.3.1}{Crawler}{section.3}% 7
-\BOOKMARK [2][-]{subsection.3.2}{Indexer}{section.3}% 8
-\BOOKMARK [1][-]{section.4}{Performance}{}% 9
-\BOOKMARK [1][-]{section.5}{Screenshots}{}% 10
+\BOOKMARK [1][-]{section.3}{Usage}{}% 5
+\BOOKMARK [2][-]{subsection.3.1}{Indexer}{section.3}% 6
+\BOOKMARK [2][-]{subsection.3.2}{Web Server}{section.3}% 7
+\BOOKMARK [1][-]{section.4}{Performance}{}% 8
+\BOOKMARK [1][-]{section.5}{Screenshots}{}% 9

@@ -79,7 +79,7 @@ public class QueryAnswerer
             term = term.toLowerCase();
             long d = term.hashCode();
             d = d - Integer.MIN_VALUE;
-            int indexNumber = (int) (d % 256);
+            int indexNumber = (int) (d % 1024);
             System.out.println(indexNumber);
             File index = new File("hadoopIndex/" + indexNumber + ".json");
 
@@ -220,13 +220,14 @@ public class QueryAnswerer
                 }
                 else if (method == 'g')
                 {
-                    throw new RuntimeException("not implemented");
+                    search = new Object[0];
+                    //throw new RuntimeException("not implemented");
                 }
                 else
                 {
                     search = searchLucene(query).toArray();
                 }
-                System.out.println("Found " + search.length + " hits.");
+                
                 for (int i = 0; i < search.length; i++)
                 {
                     String id = (String) search[i];
@@ -250,6 +251,7 @@ public class QueryAnswerer
                 outToClient.writeBytes("]}\n");
                 outToClient.flush();
                 outToClient.close();
+                System.out.println("Found " + search.length + " hits.");
             } catch (IOException ex)
             {
                 Logger.getLogger(QueryAnswerer.class.getName()).log(Level.SEVERE, null, ex);

@@ -63,9 +63,41 @@
 \begin{document}
 \maketitle
 \section{Collaboration Details}	
-	Lukas implemented the web interface, the lucene search engine backend and the hadoop backend including the ranking algorithm used for hadoop search. Tejas implemented the mapreduce jobs that created the index json files.
+	Lukas implemented the web interface, the Lucene search engine backend and the Hadoop backend including the ranking algorithm used for Hadoop search as well as a MapReduce Job for reading aggregated JSON Input, creating a inverted index and outputting it in JSON files. Tejas worked on a MapReduce job to create a inverted index and used his implementation to compare the performance with Lucene indexing.
 \section{Architecture}
 	\subsection{Indexing}
+		Our crawler stored each document in a separate JSON file named \texttt{\{id\}.json}. These files are roughly 8kb each, so we had to merge files into bigger files in order to process them with Hadoop efficiently. We create new, bigger JSON files by concatenating the objects from the small JSON files in a list, until we reach a file size of more than 10mb.
+
+		We wrote a custom \texttt{FileInputFormat} subclass for loading and parsing these aggregated JSON files. Like with our Lucene indexing strategy, we for each image extract the caption as well as all the comments and use this text data for indexing. We remove some stopwords as well as all punctuation (including hashtags). We noticed, that many captions are merely a list of hashtags and not a real text in the traditional IR sense. Thus our Hadoop Index doesn't index hashtags separately. Our FileInputFormat outputs key value pairs \texttt{({Text~=>Text})}, where the key is the document id and the text is all extracted data.
+
+		Our MapReduce Job for creating an inverted index is pretty basic: The Mapper takes a pair $(id \mapsto doc)$ and for  each $word \in doc$ maps $(word \mapsto id)$.
+
+		The Reducer then gets a list of document ids for one word and combines these document ids to a map from document ids to counts: $$\{(word \mapsto id_i)\} \xrightarrow{reduce} \left\{\left(word \mapsto \{(id_i,\#wordCount)\}\right)\right\}$$%\texttt{reduce :: [Text] => (Text => IntWritable)}.
+
+		The maps the Reducer produces are then written to JSON index files using our custom \texttt{FileOutputFormat} subclass. We considered writing all words to a single JSON index, which was inefficient for looking up a single word. Then we considered writing each word to a separate JSON index file, which is very inefficient in the Hadoop Job, because of the small file sizes. We decided on a solution in the middle; we create 1024 index files and decide which word to write to which file using a hash function. We understand that using a fixed number of files is a bad idea in terms of scalability, but decided for this technique because of its simplicity and because for our fixed-sized dataset it is very efficient, since we don't need additional index structures. 
+
+		The index file has the following form:
+		\begin{alltt}
+		\{
+		    "word1" : \{
+		        "documentCount" : 2,
+		        "documents": [
+		            \{
+			            "document" : "id1",
+			            "score" : 1.0
+		            \},
+		            \{
+			            "document" : "id2",
+		                "score" : 2.0
+		            \},
+		            ...
+		        ]
+		    \},
+		    "word2" : \{...\},
+		    ...
+		\}
+		\end{alltt}
+
 	\subsection{Webinterface and Search Engine}
 		\begin{figure}[h]
 			\begin{center}
@@ -74,54 +106,48 @@
 			\caption{An overview of our search engine architecture.}
 			\label{fig1}
 		\end{figure}
-		For the web interface we decided to go with node.js again. We start a http server on port 80 and wait for requests. Once a user enters a query, our webserver opens a TCP connection to our searchengine backbone, specifying whether to use Lucene or Hadoop and relaying the query. The backbone executes the query and returns the results as JSON. The resultsare then  output to the user by the webserver. Additional information about the documents is loaded in an asynchronus fashion using AJAX and JSON.
-	\subsection{Searching}
+
+		The actual search engine and the web interface are two separate components; the web server is written based on node.js and the search engine is written in Java, they exchange information using a TCP connection, as seen in figure~\ref{fig1}.
+
+		The search engine listens for connections on port 8999. To search, a client connects and writes 'x query', where $x$ is either 'l' for Lucene or 'h' for Hadoop and query is the search query. Our search engine then performs the search using either our index created by Hadoop or our index created by Lucene. The results are returned in JSON format.
+
+		The Lucene search uses the default Lucene ranking algorithm. Our Lucene index indexed hashtags separately, thus each term $\#$\texttt{term} in a query is replaced with \texttt{hashtags:term} to tell Lucene to look it up in the right index.
+
+		For Hadoop-based search, we lookup each term of the query in the right index file by applying the hash function and parsing the right JSON file. This way we can retrieve a list of documents with word counts. For each query we maintain a map from document to score, containing all the documents retrieved for any term of the query. For the scoring function we use a simplified BM25.
+
+		For the web interface we decided to go with node.js again. We start a http server on port 8080 and wait for requests. Once a user enters a query, our webserver opens a TCP connection to our search engine backend, specifying whether to use Lucene or Hadoop and relaying the query. The backend executes the query and returns the results as JSON. The results are then output to the user by the web server as a grid of thumbnail images. Additional information like the caption and the comments for each image is loaded in an asynchronous fashion using AJAX and JSON when the user requests it by clicking on an image.
+
 
 
 \section{Usage}
-	\subsection{Crawler}
-		To run our crawler, you first have to install node.js, which you can download at 
-		\begin{center}{\vspace{-3mm}\url{http://nodejs.org/download/}}\end{center}
-		We are also using the request node-module, which you can download and install by running the following command:
-		\begin{alltt}
-			npm install request
-		\end{alltt}
-		Now you can run our crawler by calling
-		\begin{alltt}
-			node instagramStream.js
-		\end{alltt}
-		which will start a http-server on port 1337 of your local machine. Please note that port 1337 of your machine has to be open to the public. To actually start crawling, you have to subscribe to instagram media updates. This is done by calling the following command:
-		\begin{alltt}
-			curl -F 'client_id=620c46f7e7da46149b0ad5d3cd8268ba' \textbackslash 
-			     -F 'client_secret=c57beab5c2864e608b0dc4e46e5f8b50' \textbackslash
-			     -F 'object=tag' -F 'aspect=media' -F 'object_id=\textbf{selfie}' \textbackslash
-			     -F 'callback_url=\{http://\textbf{YOUR_IP}:1337\}' \textbackslash
-			     https://api.instagram.com/v1/subscriptions/
-		\end{alltt}
-		This will subscribe to all updates of the (very popular) hashtag $\#$selfie; the crawler will start storing media items in a newly created folder selfies.
-
-		You can unsubscribe from updates by running
-		\begin{alltt}
-			curl -X DELETE 'https://api.instagram.com/v1/subscriptions?client_secret=\textbackslash
-			     c57beab5c2864e608b0dc4e46e5f8b50&object=all&\textbackslash
-			     client_id=620c46f7e7da46149b0ad5d3cd8268ba'
-		\end{alltt}
-
-		You should always unsubscribe before shutting down the crawler (\texttt{CTRL-C}), if you fail to do so you might not be able to subscribe to media for a while. We suspect that the servers at Instagram need some time to realize that our crawler is not running anymore and continue to try to send the new subscriptions to our already shutdown crawler.
 	\subsection{Indexer}
-		To deploy our indexer, you have to execute the jar file by typing 
+		To run the indexer execute the following command:
 		\begin{alltt}
-			java -jar indexer.jar \textbf{\{datadir\}}
-		\end{alltt}
-		An ‘index’ folder will be created in the file containing the all the files of the project.
+			sh indexer.sh \{dataDir\}
+		\end{alltt}	
+		where \texttt{\{dataDir\}} contains the aggregated JSON files.
+		This will create a directory \texttt{HadoopIndex} with 1024 JSON index files.
+	\subsection{Web Server}	
+		To start the web server on port 8080 execute the following command:
+		\begin{alltt}
+			sh server.sh \{dataDir\} \{hadoopDir\} \{luceneDir\}
+		\end{alltt}	
+		where \texttt{\{dataDir\}} contains the raw crawled data, \texttt{\{hadoopDir\}} contains the hadoop index and \texttt{\{luceneDir\}} contains the lucene index.
 
+		To shutdown the server properly, search for 'killtheserver'.
 \section{Performance}
-	The time needed to for indexing is dependent on the system on which the indexing is done. This performance analysis was carried out on a laptop with a 2.4 GHz CPU. For performing this test, we use a document containing 3GB worth of JSON files that are returned by our crawler. Then we try to index the JSON files in the document and calculate the time taken to index. As we can see in figure 1, the indexing time increases almost linearly as the number of JSON files that are indexed increases.
-	\begin{figure}
-		\includegraphics[keepaspectratio, width=\textwidth]{Chart.pdf}
-		\caption{Indexing Performance}
-		\label{fig:1}
-	\end{figure}
+	Tejas Part...
 \section{Screenshots}
-
+	\begin{figure}[H]
+		\includegraphics[keepaspectratio,width=\textwidth]{screenshot1.png}
+		\caption{The search front page}
+	\end{figure}
+	\begin{figure}[H]
+		\includegraphics[keepaspectratio,width=\textwidth]{screenshot2.png}
+		\caption{The results}
+	\end{figure}
+	\begin{figure}[H]
+		\includegraphics[keepaspectratio,width=\textwidth]{screenshot3.png}
+		\caption{More details on one document}
+	\end{figure}
 \end{document}

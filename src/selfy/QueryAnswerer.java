@@ -77,7 +77,11 @@ public class QueryAnswerer
         for (String term : terms)
         {
             term = term.toLowerCase();
-            File index = new File("hadoopIndex/" + term + ".json");
+            long d = term.hashCode();
+            d = d - Integer.MIN_VALUE;
+            int indexNumber = (int) (d % 256);
+            System.out.println(indexNumber);
+            File index = new File("hadoopIndex/" + indexNumber + ".json");
             if (index.exists())
             {
                 //load index, add all files to the documents hashmap with
@@ -89,21 +93,30 @@ public class QueryAnswerer
                 {
                     reader = Json.createReader(new FileReader(index));
                     json = reader.readObject();
-                    JsonArray jsonArray = json.getJsonArray("documents");
-                    double n = json.getJsonNumber("documentCount").doubleValue();
-                    double N = 400000; //YAY, hardcoded
-                    for(int i=0;i<jsonArray.size();i++)
+                    if (json.containsKey(term))
                     {
-                        JsonObject jsonObject = jsonArray.getJsonObject(i);
-                        String id = jsonObject.getString("id");
-                        double f = jsonObject.getJsonNumber("score").doubleValue();
-                        double score = f * Math.log(1/(n+0.5)/(N-n+0.5));
-                        
-                        if(!documents.containsKey(id))
-                            documents.put(id,score);
-                        else
-                            documents.put(id,documents.get(id)+score);
-                        
+                        System.out.println("Found the term "+term+" in index"); 
+                        json = json.getJsonObject(term);
+                        JsonArray jsonArray = json.getJsonArray("documents");
+                        double n = json.getJsonNumber("documentCount").doubleValue();
+                        double N = 400000; //YAY, hardcoded
+                        for (int i = 0; i < jsonArray.size(); i++)
+                        {
+                            JsonObject jsonObject = jsonArray.getJsonObject(i);
+                            String id = jsonObject.getString("id");
+                            double f = jsonObject.getJsonNumber("score").doubleValue();
+                            double score = f * Math.log(1 / (n + 0.5) / (N - n + 0.5));
+
+                            if (!documents.containsKey(id))
+                            {
+                                documents.put(id, score);
+                            }
+                            else
+                            {
+                                documents.put(id, documents.get(id) + score);
+                            }
+
+                        }
                     }
                 } catch (javax.json.stream.JsonParsingException e)
                 {
@@ -115,12 +128,13 @@ public class QueryAnswerer
             }
         }
         ArrayList<String> ranking = new ArrayList(documents.keySet());
-        Collections.sort(ranking, new Comparator<String>() {
+        Collections.sort(ranking, new Comparator<String>()
+        {
 
             @Override
             public int compare(String o1, String o2)
             {
-                return (int)Math.signum(documents.get(o1)-documents.get(o2));
+                return (int) Math.signum(documents.get(o1) - documents.get(o2));
             }
         }
         );
@@ -149,7 +163,7 @@ public class QueryAnswerer
             {
                 int docId = hits[i].doc;
                 Document d = searcher.doc(docId);
-                if(!results.contains(d.get("id")))
+                if (!results.contains(d.get("id")))
                 {
                     results.add(d.get("id"));
                     ranking.add(d.get("id"));
@@ -194,22 +208,32 @@ public class QueryAnswerer
                 }
                 outToClient.writeBytes("{\"data\":[");
                 Object[] search;
-                if(method=='l')
-                    search= searchLucene(query).toArray();
-                else if(method=='h')
-                    search= searchHadoop(query).toArray();
-                else if(method=='g')
+                if (method == 'l')
+                {
+                    search = searchLucene(query).toArray();
+                }
+                else if (method == 'h')
+                {
+                    search = searchHadoop(query).toArray();
+                }
+                else if (method == 'g')
+                {
                     throw new RuntimeException("not implemented");
+                }
                 else
-                    search= searchLucene(query).toArray();
+                {
+                    search = searchLucene(query).toArray();
+                }
                 System.out.println("Found " + search.length + " hits.");
                 for (int i = 0; i < search.length; i++)
                 {
                     String id = (String) search[i];
                     String dir = id.substring(0, 5);
                     File f = new File("/Users/lukas/Desktop/Desktop/selfies/" + dir + "/" + id + ".json");
-                    if(!f.exists())
+                    if (!f.exists())
+                    {
                         continue;
+                    }
                     FileInputStream reader = new FileInputStream(f);
                     int read;
                     while ((read = reader.read()) != -1)

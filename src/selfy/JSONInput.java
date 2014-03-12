@@ -128,6 +128,7 @@ public class JSONInput extends CombineFileInputFormat<Text, Text>
 //            if (objectNumber < array.size())
             {
                 JsonObject o = array.getJsonObject(objectNumber);
+                
                 return new Text(o.getString("id"));
             }
 

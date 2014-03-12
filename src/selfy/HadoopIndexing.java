@@ -10,11 +10,12 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 public class HadoopIndexing
 {
 
+    public static final String HADOOP_INDEX_DIR = "hadoopIndex";
+    public static final String HADOOP_DATA_DIR = "hadoopFull";
     public static final Set<String> googleStopwords;
 
     static
@@ -57,10 +58,10 @@ public class HadoopIndexing
         googleStopwords.add("the");
     }
 
-    public static class Map extends Mapper<Text, Text, Text, IntWritable>
+    public static class Map extends Mapper<Text, Text, Text, Text>
     {
 
-        private final static IntWritable one = new IntWritable(1);
+        private final IntWritable one = new IntWritable(1);
         private Text word = new Text();
 
         @Override
@@ -70,31 +71,57 @@ public class HadoopIndexing
             for (String a : line.split("\\W")) //[ \\t\\n\\x0B\\f\\r#.,;-'!?]"))
             {
                 a = a.toLowerCase();
-                if (a.equals("selfie") || googleStopwords.contains(a))
+                if (a.length() <= 1 || a.equals("selfie") || googleStopwords.contains(a))
                 {
                     continue;
                 }
                 //stopwords :D
 
                 word.set(a);
-                context.write(word, one);
+//                TupleWritable out = new TupleWritable(new Writable[]{new Text(key),one});
+
+                context.write(word, key);
             }
         }
     }
 
-    public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable>
+    public static class Reduce extends Reducer<Text, Text, Text, MapWritable>
     {
 
         @Override
-        public void reduce(Text key, Iterable<IntWritable> values, Context context)
+        public void reduce(Text key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException
         {
-            int sum = 0;
-            for (IntWritable val : values)
+//            System.out.println("working on " + key + ":");
+            MapWritable sums = new MapWritable();
+            for (Text val : values)
             {
-                sum += val.get();
+//                System.out.print(val.toString() + ", ");
+//                Text k = (Text) val.get(0);
+
+//                IntWritable v = (IntWritable) val.get(1);
+//                System.out.println(k.toString()+" "+v.toString());
+                if (sums.containsKey(val))
+                {
+                    IntWritable soFar = (IntWritable) sums.get(val);
+                    sums.put(val, new IntWritable(1 + soFar.get()));
+                }
+                else
+                {
+                    sums.put(new Text(val), new IntWritable(1));
+                }
             }
-            context.write(key, new IntWritable(sum));
+//            System.out.println();
+//            System.out.print("[");
+//            for (java.util.Map.Entry<Writable, Writable> a : sums.entrySet())
+//            {
+//                String id = ((Text) a.getKey()).toString();
+//                int score = ((IntWritable) a.getValue()).get();
+//                System.out.print(id+" => "+score+", ");
+//            }
+//            System.out.println("]");
+//            System.out.println("done with " + key);
+            context.write(key, sums);
         }
     }
 
@@ -102,25 +129,27 @@ public class HadoopIndexing
     {
         Configuration conf = new Configuration();
 
-        Job job = new Job(conf, "wordcount");
+        Job job = new Job(conf, "invertedIndex");
 
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(MapWritable.class);
 
         job.setMapperClass(Map.class);
         job.setReducerClass(Reduce.class);
 
         job.setInputFormatClass(JSONInput.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setOutputFormatClass(JSONOutput.class);
 
         FileSystem hdfs = FileSystem.get(conf);
-        if (hdfs.exists(new Path("testout")))
+        if (hdfs.exists(new Path(HADOOP_INDEX_DIR)))
         {
-            hdfs.delete(new Path("testout"), true);
+            hdfs.delete(new Path(HADOOP_INDEX_DIR), true);
         }
 
-        FileInputFormat.addInputPath(job, new Path("hadoop"));
-        FileOutputFormat.setOutputPath(job, new Path("testout"));
+//        MultipleOutputs.addNamedOutput(job, "index", TextOutputFormat.class, Text.class, MapWritable.class);
+        FileInputFormat.addInputPath(job, new Path(HADOOP_DATA_DIR));
+        FileOutputFormat.setOutputPath(job, new Path(HADOOP_INDEX_DIR));
 
         job.waitForCompletion(true);
     }

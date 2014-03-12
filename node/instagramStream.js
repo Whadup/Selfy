@@ -16,7 +16,7 @@ callback = function(error, response, body){
 	for(key in body.data)
 	{
 		prefix = body.data[key].id.substring(0,5);
-		if(!path.existsSync("selfies/"+prefix))
+		if(!fs.existsSync("selfies/"+prefix))
 			fs.mkdirSync("selfies/"+prefix);
 		fs.writeFile("selfies/"+prefix+"/"+body.data[key].id+".json", JSON.stringify(body.data[key], null, 4), function(err) {
 			if(err) 
@@ -29,6 +29,8 @@ callback = function(error, response, body){
 	}
 };
 
+if(!fs.existsSync("selfies/"))
+	fs.mkdirSync("selfies");
 
 http.createServer(function (request, res) 
 {

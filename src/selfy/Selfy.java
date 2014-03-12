@@ -58,10 +58,11 @@ public class Selfy
     private SpatialStrategy spatialStrategy;
     private SpatialContext spacialContext;
 
-    public Selfy()
+    public Selfy(String path)
     {
         try
         {
+            System.out.println("creating an index for "+path);
             //create an index
             index = new SimpleFSDirectory(new File("index"));
             IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer);
@@ -76,7 +77,7 @@ public class Selfy
 
             //Iterate over all files
             int i = 0;
-            for (File dir : new File("/Users/lukas/Desktop/selfies").listFiles())
+            for (File dir : new File(path).listFiles())
             {
                 if (dir.isDirectory())
                 {
@@ -87,14 +88,19 @@ public class Selfy
                         {
                             addSelfie(selfie);
                             i++;
+                            if (i % 1000 == 0)
+                            {
+                                System.out.println("Number of Images added: " + i + " at " + System.currentTimeMillis());
+                            }
                         }
+
                     }
                 }
                 //lazy :D
-                if (i >= 10000)
-                {
-                    break;
-                }
+//                if (i >= 10000)
+//                {
+//                    break;
+//                }
             }
 
             //save the index
@@ -115,11 +121,19 @@ public class Selfy
     {
         try
         {
-            System.out.print(f.getName() + ": ");
-
+//            System.out.print("adding " + f.getName() + ": ");
+            JsonReader reader;
+            JsonObject json;
             //Open JSON
-            JsonReader reader = Json.createReader(new FileReader(f));
-            JsonObject json = reader.readObject();
+            try
+            {
+                reader = Json.createReader(new FileReader(f));
+                json = reader.readObject();
+            } catch (javax.json.stream.JsonParsingException e)
+            {
+//                System.out.print("failed");
+                return;
+            }
 
             //I want to extract these Strings from the json
             String captionText = "";
@@ -189,7 +203,7 @@ public class Selfy
             // document contains it, thus it is useless for creating a reverse index
             body = body.replaceAll(CRAWLER_TAG, "");
             // remove hashtags and linebreaks
-            body = body.replaceAll("#", "");
+            body = body.replaceAll("#", " ");
             body = body.replaceAll("\n", " ");
 
             // Create a Lucene Document and add attributes
@@ -229,7 +243,7 @@ public class Selfy
                             }
                         } catch (InvalidShapeException e)
                         {
-                            System.out.println("corrupt location");
+//                            System.out.println("corrupt location");
                         }
 
                     }
@@ -239,8 +253,7 @@ public class Selfy
 
             doc.add(new TextField("body", body, Field.Store.YES));
 
-            System.out.println(idText);
-
+//            System.out.println(idText);
             try
             {
                 w.addDocument(doc);
@@ -262,7 +275,7 @@ public class Selfy
     public static void main(String[] args)
     {
         // TODO code application logic here
-        new Selfy();
+        new Selfy(args.length > 0 ? args[0] : "selfies");
     }
 
 }

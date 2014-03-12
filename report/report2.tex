@@ -58,40 +58,25 @@
 % gruppe
 \newcommand{\gruppe}[1]{\begin{center} Gruppe {#1} \end{center}}
 
-\title{Information Retrieval and Web Search - Project Phase 1}
+\title{Information Retrieval and Web Search - Project Phase 2}
 \author{Lukas Pfahler \and Tejas Umakanth}
 \begin{document}
 \maketitle
 \section{Collaboration Details}	
-	The crawler was implemented by Lukas. A total of 5GB of data was downloaded by both the team members, thus making a total of 10GB worth of data.
-	The indexer was worked on by both the team members.
-\section{Description}
-	\begin{wrapfigure}[5]{l}{3.15cm}
-  		\vspace{-0.6cm}
-  		\includegraphics[width=3.4cm,height=3.4cm]{logo.png}
-	\end{wrapfigure}
-	For our project, we decided to crawl and index data found on Instagram\footnote{\url{http://instagram.com}}. Instagram is a popular\footnote{Instagram reported 150 million users in September, 2013.} social media application that allows users to publish photos and videos and search the media published by other users. Each user is identified by a unique user name. Each media item can have a caption, a list of comments by other users or a location. As known from other popular social networks like Twitter and Facebook, captions and comments can contain hashtags.
+	Lukas implemented the web interface, the lucene search engine backend and the hadoop backend including the ranking algorithm used for hadoop search. Tejas implemented the mapreduce jobs that created the index json files.
 \section{Architecture}
-	\subsection{Crawler}
-		Instagram offers a developer API that allows us to subscribe to real time updates and crawl new media items as soon as they are posted.\footnote{\url{http://instagram.com/developer/realtime/}} There are different options for subscriptions: You can either subscripe to a specific user, hashtag or to a geographic area or location. All communication between the crawler and instagram is done using the HTTP protocol: The crawler is itself a http-server and once we subscripe to media updates at instagram.com, their servers start connecting to our crawler. Everytime there is new media, they issue a http POST request. The post does not contain the actual media, but is merely a notification that there has been an update. We then grab the actual data by requesting all recently added media from their servers in a http GET request.
-
-		\vspace{0.5cm}\includegraphics[width=\textwidth,keepaspectratio]{crawler.pdf}
-
-		The response is a JSON file containing a list of media items. We save each of those items in a separate JSON file. We also save a 150$\times$150px jpeg thumbnail image for each media item.
-
-		Our crawler is based on the software platform Node.js, which allows us to setup a http-server and request data in an asynchronous fashion with very little javascript code.
-		\begin{quote}
-			Node.js is a platform built on Chrome's JavaScript runtime. [..] It uses an event-driven, non-blocking I/O model that makes it lightweight and efficient, perfect for data-intensive real-time applications that run across distributed devices.\footnote{\url{http://nodejs.org/}}
-		\end{quote}
-
-		Instagram allowes developers to issue 5000 requests per hour\footnote{\url{http://instagram.com/developer/endpoints/}}, thus we introduced a politeness factor $p$: Only every $p$-th time our crawler is notified we actually request the new data. This has three effects: First, the number of requests is reduced and second, the number of new media items per response is higher. It also means that we probably miss a fraction of the data. However, if one would setup a larger system with multiple crawlers the coverage would increase. Third, for subscriptions with a very high update frequency, this makes sure we don't try to download more than our own bandwidth limit allows us to.
-
 	\subsection{Indexing}
-		A problem with the data crawled from Instagram is, that it contains only a relatively small amount of caption text - oftentimes the caption is merely a list of hashtags. To get more text, we index a concatenation of the caption and all comments. If the item is supplied with a named location, we also add the name to the indexed text. We call this concatenation $body$. From $body$ we remove all $\#$-characters. If the crawler subscribed to a specific hashtag, we also remove this tag, since it is present in all items and thus is useless for indexing.
+	\subsection{Webinterface and Search Engine}
+		\begin{figure}[h]
+			\begin{center}
+				\includegraphics[width=0.9\textwidth,keepaspectratio]{architecture.pdf}
+			\end{center}
+			\caption{An overview of our search engine architecture.}
+			\label{fig1}
+		\end{figure}
+		For the web interface we decided to go with node.js again. We start a http server on port 80 and wait for requests. Once a user enters a query, our webserver opens a TCP connection to our searchengine backbone, specifying whether to use Lucene or Hadoop and relaying the query. The backbone executes the query and returns the results as JSON. The resultsare then  output to the user by the webserver. Additional information about the documents is loaded in an asynchronus fashion using AJAX and JSON.
+	\subsection{Searching}
 
-		Furthermore, we introduce a field just for indexing the list of hashtags provided to the media item. Note that this are both hashtags from the caption and from the comments. Also we index the username separately.
-
-		Finally, we use Lucene's spatial indexing module to index the media items by their GPS locations. Internally, this builds a inverted index based on Geohash\footnote{See \url{http://en.wikipedia.org/wiki/Geohash} for more details}. The spatial module hashes longitude/latitude points to strings, such that close points share a longer prefix. It then builds a prefix tree on those strings and builds a inverted index of its nodes.
 
 \section{Usage}
 	\subsection{Crawler}
@@ -137,4 +122,6 @@
 		\caption{Indexing Performance}
 		\label{fig:1}
 	\end{figure}
+\section{Screenshots}
+
 \end{document}

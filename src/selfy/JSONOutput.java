@@ -34,8 +34,11 @@ public class JSONOutput extends FileOutputFormat<Text, MapWritable>
 
         final int n = 256;
         final FSDataOutputStream[] streams = new FSDataOutputStream[n];
+        final boolean[] first = new boolean[n];
+        
         for (int i = 0; i < n; i++)
         {
+            first[i]=true;
             Path output = new Path(p, i+".json");
             streams[i] = fileSystem.create(output);
             streams[i].write("{\n".getBytes());
@@ -52,21 +55,31 @@ public class JSONOutput extends FileOutputFormat<Text, MapWritable>
                 d = d - Integer.MIN_VALUE;
                 int indexNumber = (int)(d % n);
                 FSDataOutputStream stream = streams[indexNumber];
-                stream.write((k + ": {\n").getBytes());
-                stream.write("\tdocumentCount : ".getBytes());
+                if(!first[indexNumber])
+                    stream.write(",\n".getBytes());
+                else
+                    first[indexNumber]=false;
+                stream.write(("\""+k + "\" : {\n").getBytes());
+                stream.write("\t\"documentCount\" : ".getBytes());
                 stream.write(("" + v.size() + ",\n").getBytes());
-                stream.write("\tdocuments: [\n".getBytes());
+                stream.write("\t\"documents\": [\n".getBytes());
+                int i=0;
                 for (Map.Entry<Writable, Writable> a : v.entrySet())
                 {
                     String id = ((Text) a.getKey()).toString();
                     int score = ((IntWritable) a.getValue()).get();
                     stream.write("\t\t{\n".getBytes());
-                    stream.write(("\t\t\t document : \"" + id + "\",\n").getBytes());
-                    stream.write(("\t\t\t score : " + (float) score + "\n").getBytes());
-                    stream.write("\t\t}\n".getBytes());
+                    stream.write(("\t\t\t\"document\" : \"" + id + "\",\n").getBytes());
+                    stream.write(("\t\t\t\"score\" : " + (float) score + "\n").getBytes());
+                    stream.write("\t\t}".getBytes());
+                    if(i+1<v.size())
+                        stream.write(",\n".getBytes());
+                    else
+                        stream.write("\n".getBytes());
+                    i++;
                 }
                 stream.write("\t]\n".getBytes());
-                stream.write("},\n".getBytes());
+                stream.write("}".getBytes());
 
             }
 

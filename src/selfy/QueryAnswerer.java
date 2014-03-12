@@ -69,7 +69,7 @@ public class QueryAnswerer
 
     public List<String> searchHadoop(String query)
     {
-        String[] terms = query.split(" ");
+        String[] terms = query.split("\\W");
         //remove stop words
         //okay, stop words are removed...just don't search for stopwords
         //Find index files
@@ -82,50 +82,52 @@ public class QueryAnswerer
             int indexNumber = (int) (d % 256);
             System.out.println(indexNumber);
             File index = new File("hadoopIndex/" + indexNumber + ".json");
-            if (index.exists())
-            {
+
                 //load index, add all files to the documents hashmap with
-                //appropriate scores.
-                JsonReader reader;
-                JsonObject json;
-                //Open JSON
-                try
+            //appropriate scores.
+            JsonReader reader;
+            JsonObject json;
+            //Open JSON
+            try
+            {
+                reader = Json.createReader(new FileReader(index));
+                json = reader.readObject();
+                System.out.println(term);
+                if (json.containsKey(term))
                 {
-                    reader = Json.createReader(new FileReader(index));
-                    json = reader.readObject();
-                    if (json.containsKey(term))
+                    System.out.println("Found the term " + term + " in index");
+                    json = json.getJsonObject(term);
+                    JsonArray jsonArray = json.getJsonArray("documents");
+                    double n = json.getJsonNumber("documentCount").doubleValue();
+                    double N = 400000; //YAY, hardcoded
+                    for (int i = 0; i < jsonArray.size(); i++)
                     {
-                        System.out.println("Found the term "+term+" in index"); 
-                        json = json.getJsonObject(term);
-                        JsonArray jsonArray = json.getJsonArray("documents");
-                        double n = json.getJsonNumber("documentCount").doubleValue();
-                        double N = 400000; //YAY, hardcoded
-                        for (int i = 0; i < jsonArray.size(); i++)
+                        JsonObject jsonObject = jsonArray.getJsonObject(i);
+                        String id = jsonObject.getString("document");
+                        double f = jsonObject.getJsonNumber("score").doubleValue();
+                        
+                        //pseudo bm25 score with k=1.2 and documentlength=average documentlength and assuming queryfrequency=1
+                        double score = 2.2*f/(1.2*f) * Math.log((N - n + 0.5) / (n + 0.5));
+
+                        if (!documents.containsKey(id))
                         {
-                            JsonObject jsonObject = jsonArray.getJsonObject(i);
-                            String id = jsonObject.getString("id");
-                            double f = jsonObject.getJsonNumber("score").doubleValue();
-                            double score = f * Math.log(1 / (n + 0.5) / (N - n + 0.5));
-
-                            if (!documents.containsKey(id))
-                            {
-                                documents.put(id, score);
-                            }
-                            else
-                            {
-                                documents.put(id, documents.get(id) + score);
-                            }
-
+                            documents.put(id, score);
                         }
+                        else
+                        {
+                            documents.put(id, documents.get(id) + score);
+                        }
+
                     }
-                } catch (javax.json.stream.JsonParsingException e)
-                {
-//                System.out.print("failed");
-                } catch (FileNotFoundException ex)
-                {
-                    Logger.getLogger(QueryAnswerer.class.getName()).log(Level.SEVERE, null, ex);
                 }
+            } catch (javax.json.stream.JsonParsingException e)
+            {
+                System.out.print("failed"+e.toString());
+            } catch (FileNotFoundException ex)
+            {
+                Logger.getLogger(QueryAnswerer.class.getName()).log(Level.SEVERE, null, ex);
             }
+
         }
         ArrayList<String> ranking = new ArrayList(documents.keySet());
         Collections.sort(ranking, new Comparator<String>()
@@ -134,11 +136,11 @@ public class QueryAnswerer
             @Override
             public int compare(String o1, String o2)
             {
-                return (int) Math.signum(documents.get(o1) - documents.get(o2));
+                return (int) Math.signum(documents.get(o2) - documents.get(o1));
             }
         }
         );
-        return ranking;
+        return ranking.subList(0, Math.min(ranking.size(),64));
     }
 
     public List<String> searchSpatial(String query, double a, double b, double c, double d)
@@ -291,7 +293,7 @@ public class QueryAnswerer
         System.out.println("Starting Searchengine Backbone");
 
         QueryAnswerer q = new QueryAnswerer();
-        System.out.println(q.searchHadoop("pizza pretty"));
+        //System.out.println(q.searchHadoop("pizza pretty"));
         q.serverLoop();
         System.out.println("Bye Bye!");
     }
